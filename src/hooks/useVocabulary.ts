@@ -56,10 +56,10 @@ export function useUpdateVocabulary(currentPage: string) {
   const queryKey = vocabKeys.list(currentPage);
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Vocabulary> }) =>
-      updateVocabulary(id, updates),
+    mutationFn: ({ _id, updates }: { _id: string; updates: Partial<Vocabulary> }) =>
+      updateVocabulary(_id, updates),
 
-    onMutate: async ({ id, updates }) => {
+    onMutate: async ({ _id, updates }) => {
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<VocabularyApiResponse>(queryKey);
 
@@ -67,7 +67,7 @@ export function useUpdateVocabulary(currentPage: string) {
         queryClient.setQueryData<VocabularyApiResponse>(queryKey, {
           ...previousData,
           data: previousData.data.map(vocab =>
-            vocab._id === id ? { ...vocab, ...updates } : vocab,
+            vocab._id === _id ? { ...vocab, ...updates } : vocab,
           ),
         });
       }
@@ -89,22 +89,22 @@ export function useDeleteVocabulary(currentPage: string) {
   const queryKey = vocabKeys.list(currentPage);
 
   return useMutation({
-    mutationFn: (id: string) => deleteVocabulary(id),
+    mutationFn: (_id: string) => deleteVocabulary(_id),
 
-    onMutate: async id => {
+    onMutate: async _id => {
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<VocabularyApiResponse>(queryKey);
 
       if (previousData) {
         queryClient.setQueryData<VocabularyApiResponse>(queryKey, {
           ...previousData,
-          data: previousData.data.filter(vocab => vocab._id !== id),
+          data: previousData.data.filter(vocab => vocab._id !== _id),
         });
       }
 
       return { previousData };
     },
-    onError: (err, id, context) => {
+    onError: (err, _id, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }

@@ -1,8 +1,14 @@
 import { FileDown, FileSpreadsheet, LanguagesIcon, Play } from 'lucide-react';
 import { useState } from 'react';
 import FilterBar from './components/FilterBar';
+import VocabularyForm from './components/VocabularyForm';
 import VocabularyTable from './components/VocabularyTable';
-import { useDeleteVocabulary, useUpdateVocabulary, useVocabulary } from './hooks/useVocabulary';
+import {
+  useCreateVocabulary,
+  useDeleteVocabulary,
+  useUpdateVocabulary,
+  useVocabulary,
+} from './hooks/useVocabulary';
 import type { CEFRLevel, Vocabulary } from './types';
 
 export default function App() {
@@ -16,8 +22,13 @@ export default function App() {
   const { data, isLoading, isError, error, isFetching, isSuccess } = useVocabulary(
     currentPage.toString(),
   );
+
+  const totalPages = data?.pagination.totalPages || 0;
+  const totalItems = data?.pagination.totalItems || 0;
+
   const deleteMutation = useDeleteVocabulary(currentPage.toString());
   const updateVocabMutation = useUpdateVocabulary(currentPage.toString());
+  const addVocabMutation = useCreateVocabulary(currentPage.toString());
 
   const vocabulary: Vocabulary[] = data?.data || [];
   const filteredAndSortedVocabulary = vocabulary
@@ -43,10 +54,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function handleToggleDifficult(id: string) {
-    const item = vocabulary.find(v => v._id === id);
+  async function handleToggleDifficult(_id: string) {
+    const item = vocabulary.find(v => v._id === _id);
     if (!item) return;
-    await updateVocabMutation.mutateAsync({ id, updates: { isDifficult: !item.isDifficult } });
+
+    await updateVocabMutation.mutateAsync({
+      _id,
+      updates: { isDifficult: !item.isDifficult },
+    });
   }
 
   async function handleDelete(id: string) {
@@ -59,6 +74,18 @@ export default function App() {
       },
     });
   }
+
+  const handleAddOrUpdate = async (data: Omit<Vocabulary, '_id'>) => {
+    if (editingVocabulary) {
+      await updateVocabMutation.mutateAsync({
+        _id: editingVocabulary._id || '',
+        updates: data,
+      });
+      setEditingVocabulary(null);
+    } else {
+      await addVocabMutation.mutateAsync(data);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
@@ -84,11 +111,12 @@ export default function App() {
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="p-6 pb-2 space-y-4 shrink-0">
-          {/* <VocabularyForm
+          <VocabularyForm
             onAdd={handleAddOrUpdate}
-            initialData={editingVocab}
+            initialData={editingVocabulary}
+            key={editingVocabulary?._id || 'new'}
             onCancelEdit={() => setEditingVocabulary(null)}
-          /> */}
+          />
           <div className="flex items-center justify-between">
             <h3 className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
               Vocabulary Library
@@ -127,6 +155,12 @@ export default function App() {
             onDelete={handleDelete}
             onEdit={handleEdit}
             onToggleDifficult={handleToggleDifficult}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            currentPage={currentPage}
+            onPageChange={(newPage: number) => {
+              setCurrentPage(newPage);
+            }}
           />
         </div>
       </div>
